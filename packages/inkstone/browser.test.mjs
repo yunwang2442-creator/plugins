@@ -101,15 +101,20 @@ test('off Windows the login wait ends on process exit, never on a title', async 
 test('on Windows the login wait ends on the console title (two hits)', async () => {
   const { spawn } = await import('node:child_process')
   const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 10000)'], { stdio: 'ignore' })
+  let probes = 0
   try {
     const how = await waitForConsoleWindow(child, {
       platform: 'win32',
       timeoutMs: 5000,
       pollMs: 20,
       titleDelayMs: 0,
-      windowTitle: () => '书生·端砚 Intern InkStone - 控制台',
+      windowTitle: () => (++probes, '书生·端砚 Intern InkStone - 控制台'),
     })
     expect(how).toBe('console')
+    // the two-hit rule: the wait ends on the second matching probe, not
+    // later — a build that needs more hits (or forgets to count) reads the
+    // window more times before it answers
+    expect(probes).toBe(2)
   } finally {
     try { child.kill() } catch {}
   }
